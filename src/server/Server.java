@@ -23,10 +23,12 @@ public class Server {
     }
 
     public Server(int porta)throws IOException, ClassNotFoundException{
-        System.out.println("Aguardando conexão...");
+        System.out.println("Aguardando cliente...");
         serverSocket = new ServerSocket(porta);
         while (true){
             Socket socket = serverSocket.accept();
+            System.out.println("Cliente conectado!");
+            trataConexao(socket);
         }
     }
 
@@ -34,9 +36,17 @@ public class Server {
         try {
             ObjectInputStream objectInputStream = new ObjectInputStream(socket.getInputStream());
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
-            
+
+            Object objeto = objectInputStream.readObject();
+            System.out.println(objeto);
+
+
         }catch (IOException e){
-            JOptionPane.showMessageDialog(null, "error: " + e.getMessage());
+            JOptionPane.showMessageDialog(null, "Erro de IOException no servidor. Error: " + e.getMessage());
+        }catch (ClassNotFoundException e){
+            JOptionPane.showMessageDialog(null, "Erro de ClassNotFoundException no servidor. Error: " + e.getMessage());
+        }catch (Exception e){
+            JOptionPane.showMessageDialog(null, "Erro de Exception no servidor. Error: " + e.getMessage());
         }finally {
             socket.close();
         }
