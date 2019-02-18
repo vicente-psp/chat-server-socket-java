@@ -1,5 +1,8 @@
 package server;
 
+import util.Mensagem;
+import util.Status;
+
 import javax.swing.*;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -9,46 +12,76 @@ import java.net.Socket;
 
 public class Server {
 
-    private ServerSocket serverSocket = null;
-    private static final int PORTA = 8000;
+    private ServerSocket serverSocket;
 
     public static void main(String[] args) {
-        try {
-            new Server(PORTA);
-        }catch (IOException e) {
-            JOptionPane.showMessageDialog(null, "error: " + e.getMessage());
-        }catch (ClassNotFoundException e) {
-            JOptionPane.showMessageDialog(null, "error: " + e.getMessage());
+        try{
+            new Server(3322);
+        }catch(IOException e){
+            JOptionPane.showMessageDialog(null, "ERRO - Erro de entrada ou saída de dados: " + e.getMessage());
+        }catch(ClassNotFoundException e){
+            JOptionPane.showMessageDialog(null, "ERRO - Classe não encontrada: " + e.getMessage());
         }
     }
 
-    public Server(int porta)throws IOException, ClassNotFoundException{
-        System.out.println("Aguardando cliente...");
-        serverSocket = new ServerSocket(porta);
-        while (true){
-            Socket socket = serverSocket.accept();
-            System.out.println("Cliente conectado!");
+    public Server(int porta) throws IOException, ClassNotFoundException {
+        System.out.println("Aguardando conexão...\n");
+        criaServerSocket(porta);
+        while(true){
+            Socket socket = esperaConexao();
+            System.out.println("Cliente conectado.");
             trataConexao(socket);
+            System.out.println("Conexão finalizada.\n");
         }
     }
 
-    public void trataConexao(Socket socket) throws IOException, ClassNotFoundException{
+    private void criaServerSocket(int porta) throws IOException {
+        serverSocket = new ServerSocket(porta);
+    }
+
+    public Socket esperaConexao() throws IOException {
+        Socket socket = serverSocket.accept();
+        return socket;
+    }
+
+    public void trataConexao(Socket socket)throws IOException, ClassNotFoundException {
         try {
-            ObjectInputStream objectInputStream = new ObjectInputStream(socket.getInputStream());
-            ObjectOutputStream objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
+            ObjectOutputStream objOutput = new ObjectOutputStream(socket.getOutputStream());
+            ObjectInputStream objInput = new ObjectInputStream(socket.getInputStream());
 
-            Object objeto = objectInputStream.readObject();
-            System.out.println(objeto);
+            Mensagem msg = (Mensagem) objInput.readObject();
+            String operacao = msg.getOperacao();
+            Mensagem mensagem = null;
+            if(operacao.equals("CLIENT")){
+                String nome = (String) msg.getParam("nome");
+                String sobrenome = (String) msg.getParam("sobrenome");
 
+                mensagem = new Mensagem("SERVER");
 
-        }catch (IOException e){
-            JOptionPane.showMessageDialog(null, "Erro de IOException no servidor. Error: " + e.getMessage());
-        }catch (ClassNotFoundException e){
-            JOptionPane.showMessageDialog(null, "Erro de ClassNotFoundException no servidor. Error: " + e.getMessage());
-        }catch (Exception e){
-            JOptionPane.showMessageDialog(null, "Erro de Exception no servidor. Error: " + e.getMessage());
-        }finally {
-            socket.close();
+                if(nome == null || sobrenome == null){
+                    mensagem.setStatus(Status.PARAMERROR);
+                }else{
+                    mensagem.setStatus(Status.OK);
+                    mensagem.setParam("mensagem", "Hello World, " + nome + " " + sobrenome);
+                }
+
+            }
+
+            objOutput.writeObject(mensagem);
+            objOutput.flush();
+
+            System.out.println("Mensagem enviada para o Cliente: " + msg);
+
+            objOutput.close();
+            objInput.close();
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(null, "Erro no servidor: " + e.getMessage());
+        }finally{
+            fechaSocket(socket);
         }
+    }
+
+    private void fechaSocket(Socket socket) throws IOException {
+        socket.close();
     }
 }
